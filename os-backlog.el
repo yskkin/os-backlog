@@ -52,8 +52,13 @@
   :type 'string
   :group 'os-backlog)
 
+(defvar os-backlog-project-alist nil
+  "A alist of (PROJECT_ID PROJECT_KEY).")
+
 (defvar os-backlog-project-id nil
   "Project id of current buglist.")
+(defvar os-backlog-project-key nil
+  "Project key of current buglist.")
 
 (defconst os-backlog-date-regex
   (rx
@@ -109,7 +114,20 @@ Return the server decoded response in JSON."
           (cons url-http-response-status (ignore-errors (json-read-from-string (decode-coding-string (buffer-substring (point) (point-max)) 'utf-8))))
         (kill-buffer)))))
 
-;; override
+(defun os-backlog-build-project-alist ()
+  "Build `os-backlog-project-alist'."
+  (let* ((res (os-backlog-request "GET" (concat os-base-url "/projects")))
+         (json (cdr res)))
+    (mapcar (lambda (project)
+              (list (cdr (assq 'id project)) (cdr (assq 'projectKey project))))
+            json)))
+
+(defun os-backlog-find-project-id (project-key)
+  "Find projectId from PROJECT-KEY."
+  (unless os-backlog-project-alist
+    (setq os-backlog-project-alist (os-backlog-build-project-alist)))
+  (caar (delq nil (mapcar (lambda (x) (and (equal (cadr x) project-key) x)) os-backlog-project-alist))))
+
 ;;;###autoload
 (defun os-backlog-base-url (url)
   "Return base URL."
@@ -118,9 +136,11 @@ Return the server decoded response in JSON."
     (setq url (concat "https://" url)))
 
   (let ((purl (url-generic-parse-url url)))
+    (when (string-match "^.*/projects/\\([^/]+\\)" (url-filename purl))
+      (setq os-backlog-project-key (match-string 1 (url-filename purl)))
       (concat (url-type purl) "://"
               (url-host purl)
-              "/api/v2")))
+              "/api/v2"))))
 
 (defun os-backlog-project-name (url)
   "Return repo name at URL."
@@ -162,6 +182,7 @@ Return the server decoded response in JSON."
 
     `(:title ,title
              :url ,os-base-url
+             :project-key ,os-backlog-project-key
              :bugs ,(mapcar 'os-backlog-json-to-bug json))))
 
 (defun os-backlog-bug-to-json (bug)
