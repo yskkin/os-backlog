@@ -45,7 +45,7 @@
   '((base-url      . os-backlog-base-url)
     (fetch-buglist . os-backlog-fetch-buglist)
     (send-buglist  . os-backlog-send-buglist))
-  "Redmine backend.")
+  "Backlog backend.")
 
 (defcustom os-backlog-auth nil
   "Backlog api key."
@@ -110,6 +110,7 @@ Return the server decoded response in JSON."
         (kill-buffer)))))
 
 ;; override
+;;;###autoload
 (defun os-backlog-base-url (url)
   "Return base URL."
   ;; if no url type, try https
@@ -150,6 +151,7 @@ Return the server decoded response in JSON."
             :date-creation ,ctime
             :date-modification ,mtime))))
 
+;;;###autoload
 (defun os-backlog-fetch-buglist (last-update)
   "Return the buglist at os-base-url."
   (let* ((url (concat os-base-url "/issues"))
@@ -168,6 +170,7 @@ Return the server decoded response in JSON."
             ((subject     . ,(os-get-prop :title bug))
              (description . ,(os-get-prop :desc bug)))))))
 
+;;;###autoload
 (defun os-backlog-send-buglist (buglist)
     "Send a BUGLIST on the bugtracker and return new bugs."
     (let* ((new-url (concat os-base-url "/issues.json"))
@@ -213,4 +216,6 @@ Return the server decoded response in JSON."
                    (cdr (assoc 'issue (cdr res))))
                   new-bugs)))))
       `(:bugs ,new-bugs)))
+
+(provide 'os-backlog)
 ;;; os-backlog.el ends here
